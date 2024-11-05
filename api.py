@@ -1,40 +1,58 @@
 import requests
+import json
+import requests
 
+client_id = '[client id]'
+client_secret = '[client secert]'
 
 class RTZR:
-    def __init__(self):
-        self.url = "https://openapi.vito.ai/v1/transcribe"       # API URL
-        self.token = "YOUR_JWT_TOKEN"  # 여기에 실제 JWT 토큰을 입력
+  def __init__(self,client_id, client_secret):
+    self.client_id = client_id
+    self.client_secret = client_secret
+  
+  def get_access_token(self):
+    resp = requests.post(
+        'https://openapi.vito.ai/v1/authenticate',
+        data={'client_id': client_id,
+            'client_secret': client_secret}
+    )
+    resp.raise_for_status()
+    access_token = resp.json()
+    return access_token['access_token']
+  
+  def get_stt_token(self,access_token):
+    # 옵션들
+    config = {
+      "use_itn": False,
+      "use_disfluency_filter": False,
+      "use_profanity_filter": False,
+      "use_paragraph_splitter": True,
+    }
+
+    resp = requests.post(
+        'https://openapi.vito.ai/v1/transcribe',
+        headers={'Authorization': 'bearer '+ access_token},
+        data={'config': json.dumps(config)},  #
+        files={'file': open('sample.mp3', 'rb')} #파일
+    )
+    resp.raise_for_status()
+    stt_id = resp.json()
+    return stt_id['id']
+  
+  def get_scrpit(self,stt_id,access_token):
+    resp = requests.get(
+        'https://openapi.vito.ai/v1/transcribe/'+stt_id,
+        headers={'Authorization': 'bearer '+ access_token},
+    )
+    resp.raise_for_status()
+    print(resp.json())
     
-    def get_file_path(self):
-        # 파일 경로
-        file_path = "sample.wav"
-        # 이건 나중에 핸들러 만들어서 분리할것.
     
-    def get_header(self):
-        # 요청 헤더
-        headers = {
-            "accept": "application/json",
-            "Authorization": f"Bearer {self.token}",
-        }
-        return headers
-    
-    def get_files(self):
-        # 요청 데이터
-        files = {
-            "file": open(self.get_file_path(), "rb"),
-            "config": ('', '{"model_name": "sommers"}'),  # config는 문자열로 전송
-        }
-        return files
-    
-    def post(self):
-    # POST 요청
-        response = requests.post(self.url, headers=self.get_headers(), files=self.get_files())
-        # 응답 확인
-        if response.status_code == 200:
-            print("Transcription successful:")
-            print(response.json()) # 응답 결과
-        else:
-            #실패 코드
-            print(f"Error {response.status_code}: {response.text}")
-        
+rt = RTZR(client_id,client_secret)
+
+
+access_token = rt.get_access_token()
+stt_id = rt.get_stt_token(rt.get_access_token())
+script = rt.get_scrpit(stt_id,access_token)
+
+ 
