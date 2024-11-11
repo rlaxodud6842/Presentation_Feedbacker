@@ -1,11 +1,15 @@
 import time
 import requests
 import json
-import requests
+import os
+import dotenv
 
-# 다루는 방식 적절한거 채택해야함.
-client_id = {'[client id]'}
-client_secret = '[client secert]' 
+
+# 다루는 방식 dotenv 채택함
+dotenv.load_dotenv()
+client_id = os.getenv("ci")
+client_secret = os.getenv("cs")
+
 
 class RTZR:
   def __init__(self,client_id, client_secret):
