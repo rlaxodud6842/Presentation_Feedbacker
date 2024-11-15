@@ -2,6 +2,9 @@ import time
 import requests
 import json
 import requests
+
+#dotenv 쓰지않고 Streamlit 내에서 처리하고 끝냄
+
 class RTZR:
   def __init__(self,client_id, client_secret,presentation_file):
     self.client_id = client_id
