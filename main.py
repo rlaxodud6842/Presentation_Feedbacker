@@ -4,16 +4,17 @@ import api
 
 class stream:
   def __init__(self) -> None:
-     pass
-   
+      st.title("Presentation Feedbacker")
+
   def side_bar(self) -> dict:
+    
     st.sidebar.title("발표 영상 업로드")
     
     client_id = st.sidebar.text_input("RTZR API CLIENT_ID 입력") # RTZR 토큰 획득
     client_secret = st.sidebar.text_input("RTZR API CLIENT_SECRET 입력")# RTZR 시크릿 획득
     
     # 사이드바에 파일 업로드 기능 추가
-    uploaded_video = st.sidebar.file_uploader("발표 영상을 업로드하세요", type=["mp4", "mov", "avi", "mkv","mp3"])
+    uploaded_video = st.sidebar.file_uploader("발표 영상을 업로드하세요", type=["mp3"])
     if uploaded_video is not None:
       st.sidebar.video(uploaded_video)
       

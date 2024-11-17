@@ -31,7 +31,7 @@ class RTZR:
   def get_stt_id(self,access_token):
     # 옵션들
     config = {
-      "use_itn": False,
+      "use_itn": True,
       "use_disfluency_filter": False,
       "use_profanity_filter": False,
       "use_paragraph_splitter": True,
