@@ -1,8 +1,10 @@
+import hashlib
 import altair as alt
 import re
 import time
 from typing import Counter
 import pandas as pd
+import requests
 import streamlit as st
 import api
 import qwen
@@ -15,7 +17,16 @@ class stream:
       self.feedback = ""
       st.set_page_config(layout="wide")
       st.title("Presentation Feedbacker")
+      self.model_flag = False
+      self.load_model()
+      
 
+  def load_model(self):
+    if self.model_flag == False:
+        self.model = qwen.Qwen()  # Qwen 모델을 초기화
+        self.model_flag = True
+        print("hi")
+      
   def side_bar(self) -> dict:
     st.sidebar.title("발표 영상 업로드")
     
@@ -89,24 +100,44 @@ class stream:
     
     with col2:
         container2 = st.container()
+        task_id = hashlib.sha256(rtzr.script.encode()).hexdigest()
+
+        # API 서버에 예측 요청 보내기
+        response = requests.post(
+            'http://127.0.0.1:5000/predict',
+            json={'script': rtzr.script, 'task_id': task_id}
+        )
+        
+        # 서버 응답 처리
+        data = response.json()
+        status = data.get('status', '')
+
+        print(status)
+
+        while status == "processing":
+            time.sleep(20)
+            response = requests.get(
+                f'http://127.0.0.1:5000/result/{task_id}'  # 수정된 URL 경로
+            )
+            print("requesting")
+            
+            # 응답 처리
+            data = response.json()
+            status = data.get('result', '')
+
+        # 예측 결과 출력
+        if status == "completed":
+            script = data.get('data', '')
+            taged_script = script
+        elif "error" in data:
+            print(f"Error: {data.get('error')}")
+        else:
+            print("Result not found")
+
+                
         container2.markdown("## 문제점 포착")  # 두 번째 제목
         # Custom HTML 표시
-        components.html(f"<div style='font-size: 16px;'>{self.highlight_script("""
-                                                                [안녕:B-REP] [안녕하세요:I-REP] 저는 ai학과 20학 20학번 [강창:B-REP] [강창열입니다.:I-REP]
-                                                                저는 cnn cnn에 대해 설명해보겠습니다.
-                                                                cnn은 컨볼루 [컨볼루션:I-REP] 뉴럴 네트워크입니다.
-                                                                [감사합:B-REP] [감사합니다.:I-REP]
-                                                                [어:B-FIL] cnn은 아주 [어렵:B-REP] [어렵습니다.:I-REP]
-                                                                저도 잘 모릅니 모릅니다. [어:B-FIL]
-                                                                [음:B-FIL] [아:B-FIL] 감사합니다.
-                                                                [음:B-FIL] 안녕하세요 저는 이금정 입니다 [만나서:I-REP] 반갑습 [아니:I-REP] [반갑습니다.:I-REP]
-                                                                이 부분에 대해서는 [아:B-FIL] 저도 잘 모르는데요.
-                                                                [하:B-REP] [질문받겠습니다.:I-REP]
-                                                                그 부분에 대해서 설명드리 설명드리겠습니다.
-                                                                제가 그 부분에 대해서 공부해봤 [공부해봤는데요.:I-REP]
-                                                                죄송합니 죄송합니다. 잘 모르겠 모르겠습니다.
-                                                                [아:B-FIL] [음:B-FIL] [어:B-FIL] [감사합:I-REP] [감사합니다.:I-REP]
-                                                                 """)}</div>", height=400)
+        components.html(f"<div style='font-size: 16px;'>{self.highlight_script(taged_script)}</div>", height=400)
     
     words = re.findall(r'\b\w+\b', rtzr.script.lower())  # 단어 분리 및 소문자 변환
     word_counts = Counter(words)
@@ -135,19 +166,19 @@ class stream:
     )
     st.altair_chart(chart)
     
-    self.qw = qwen.Qwen()
-    with st.spinner("AI 피드백 생성중..."):
-        while True:
-            if self.feedback != "":
-                break
-            else:
-                self.feedback = self.qw.make_text(rtzr.script)
-                time.sleep(15)  # 대본을 가져오는 동안 3초마다 재시도
-    st.success("AI 피드백 완료")
-    col3, = st.columns(1)
-    with col3:
-      container3 = st.container()
-      container3.markdown("##"+self.feedback)  # 첫 번째 제목
+    
+    # with st.spinner("AI 피드백 생성중..."):
+    #     while True:
+    #         if self.feedback != "":
+    #             break
+    #         else:
+    #             self.feedback = self.model.make_text(rtzr.script)
+    #             time.sleep(15)  # 대본을 가져오는 동안 3초마다 재시도
+    # st.success("AI 피드백 완료")
+    # col3, = st.columns(1)
+    # with col3:
+    #   container3 = st.container()
+    #   container3.markdown("## "+self.feedback)  # 첫 번째 제목
 
 
 if __name__ == "__main__":
