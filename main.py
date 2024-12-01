@@ -10,22 +10,14 @@ import api
 import qwen
 import matplotlib.pyplot as plt
 import streamlit.components.v1 as components
-
+import voice_preprocesser
+import feedbacker
 
 class stream:
   def __init__(self) -> None:
       self.feedback = ""
       st.set_page_config(layout="wide")
-      st.title("Presentation Feedbacker")
-      self.model_flag = False
-      self.load_model()
-      
-
-  def load_model(self):
-    if self.model_flag == False:
-        self.model = qwen.Qwen()  # Qwen 모델을 초기화
-        self.model_flag = True
-        print("hi")
+      st.title("AI Based Presentation Feedbacker")
       
   def side_bar(self) -> dict:
     st.sidebar.title("발표 영상 업로드")
@@ -37,10 +29,24 @@ class stream:
     uploaded_video = st.sidebar.file_uploader("발표 영상을 업로드하세요", type=["mp3"])
     if uploaded_video is not None:
       st.sidebar.video(uploaded_video)
-      
+    
+    
+    st.sidebar.header("목소리의 크기를 선택해주세요")
+    voice_value = st.sidebar.radio(label = 'Radio buttons', options = ['큼', '중간', '작음'])
+    st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
+    
+    if st.sidebar.button("MP3 전처리하기"):
+        if voice_value is not None and uploaded_video is not None:
+            volum_processed = voice_preprocesser.process_audio_with_ffmpeg(uploaded_video,voice_value)
+            uploaded_video = volum_processed
+            time.sleep(3)
+            st.sidebar.write("전처리 이후 음성")
+            st.sidebar.video(uploaded_video)
+            
     if st.sidebar.button("분석하기"):
       if client_id is not None and client_secret and not None and uploaded_video is not None:
         self.rtzr_api(client_id,client_secret,uploaded_video)
+        
   
   def highlight_script(self,script):
     import re
@@ -94,7 +100,7 @@ class stream:
     with col1:
         container1 = st.container()
         container1.markdown("## 음성 변환 대본")  # 첫 번째 제목
-        components.html(rtzr.script,height=400)
+        components.html(rtzr.script,height=700)
 
     # 두 번째 열에 컨테이너와 텍스트 영역 추가
     
@@ -137,7 +143,11 @@ class stream:
                 
         container2.markdown("## 문제점 포착")  # 두 번째 제목
         # Custom HTML 표시
-        components.html(f"<div style='font-size: 16px;'>{self.highlight_script(taged_script)}</div>", height=400)
+        components.html(f"<div style='font-size: 16px;'>{self.highlight_script(taged_script)}</div>", height=700)
+        
+    st.write(feedbacker.get_feedback(taged_script))
+    
+    
     
     words = re.findall(r'\b\w+\b', rtzr.script.lower())  # 단어 분리 및 소문자 변환
     word_counts = Counter(words)
@@ -160,28 +170,30 @@ class stream:
         color='빈도수:Q',
         tooltip=['단어', '빈도수']
     ).properties(
-        width=1600,
+        width=1500,
         height=400,
         title="단어 빈도수 상위 10개"
     )
     st.altair_chart(chart)
     
     
-    # with st.spinner("AI 피드백 생성중..."):
-    #     while True:
-    #         if self.feedback != "":
-    #             break
-    #         else:
-    #             self.feedback = self.model.make_text(rtzr.script)
-    #             time.sleep(15)  # 대본을 가져오는 동안 3초마다 재시도
-    # st.success("AI 피드백 완료")
-    # col3, = st.columns(1)
-    # with col3:
-    #   container3 = st.container()
-    #   container3.markdown("## "+self.feedback)  # 첫 번째 제목
+    self.model = qwen.Qwen()
+    with st.spinner("AI 피드백 생성중..."):
+        while True:
+            if self.feedback != "":
+                break
+            else:
+                self.feedback = self.model.make_text(rtzr.script)
+                time.sleep(50)  # 대본을 가져오는 동안 3초마다 재시도
+    st.success("AI 피드백 완료")
+    col3, = st.columns(1)
+    with col3:
+      container3 = st.container()
+      container3.markdown("## "+self.feedback)  # 첫 번째 제목
 
 
 if __name__ == "__main__":
+    #model 불러오기
   stl = stream()
   stl.side_bar()
   
